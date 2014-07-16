@@ -1,3 +1,8 @@
+#include <iostream>
+#include <stack>
+#include <algorithm>
+using namespace std;
+
 #define N_OPTR 9
 typedef enum {ADD, SUB, MUL, DIV, POW, FAC, L_P, R_P, EOE} Operator;
 
@@ -11,17 +16,23 @@ const char pri[N_OPTR][N_OPTR] = {
 	'<', '<', '<', '<', '<', '<', '<', '=', ' ',
 	' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ',
 	'<', '<', '<', '<', '<', '<', '<', ' ', '=',
-}
+};
 
 void readNumber(char*& p, stack<float>& stk) {
-	skt.push((float)(*p - '0'));
-	while (isdigit(*(++p)))
-		stk.push(stk.pop() * 10 + (*p - '0'));
+	stk.push((float)(*p - '0'));
+	while (isdigit(*(++p))) {
+        float f = stk.top();
+        stk.pop();
+		stk.push(f * 10 + (*p - '0'));
+    }
 	if ('.' != *p)
 		return;
 	float fraction = 1;
-	while (isdigit(*(++p))) 
-		stk.push(stk.pop() + (*p - '0') * (fraction /= 10));
+	while (isdigit(*(++p))) {
+        float f = stk.top();
+        stk.pop();
+		stk.push(f + (*p - '0') * (fraction /= 10));
+    }
 }
 
 Operator optr2rank(char op) {
@@ -53,7 +64,7 @@ void append(char*& rpn, float opnd) {
 	strcat(rpn, buf);
 }
 
-void append(char*& rpn, char op) {
+void append(char*& rpn, char optr) {
 	int n = strlen(rpn);
 	rpn = (char*) realloc(rpn, sizeof(char) * (n + 3));
 	sprintf(rpn + n, "%c ", optr);
@@ -67,6 +78,12 @@ float calcu(char op, float opnd) {
 	return temp;
 }
 
+float power(float f1, float f2) {
+    while (0 < --f2)
+        f1 *= f1;
+    return f1;
+}
+
 float calcu(float opnd2, char op, float opnd1) {
 	switch (op) {
 		case '+' : return opnd2 + opnd1; break;
@@ -78,7 +95,7 @@ float calcu(float opnd2, char op, float opnd1) {
 	}
 }
 
-float evaluate(char* S, char*& RPN) { 
+float evaluate(char* S, char*& RPN) {
 	stack<float> opnd;
 	stack<char> optr;
 	optr.push('\0');
@@ -97,21 +114,35 @@ float evaluate(char* S, char*& RPN) {
 					optr.pop();
 					S++;
 					break;
-				case '>':
-					char op = optr.pop();
+				case '>': {
+					char op = optr.top();
+                    optr.pop();
 					append(RPN, op);
 					if ('!' == op) {
-						float pOpnd = opnd.pop();
+						float pOpnd = opnd.top();
+                        opnd.pop();
 						opnd.push(calcu(op, pOpnd));
 					}
 					else {
-						float pOpnd2 = opnd.pop(), pOpnd1 = opnd.pop();
+						float pOpnd2 = opnd.top();
+                        opnd.pop();
+                        float pOpnd1 = opnd.top();
+                        opnd.pop();
 						opnd.push(calcu(pOpnd1, op, pOpnd2));
 					}
 					break;
+                }
 				default: exit(-1);
 			}
-		}
+        }
 	}
-	return opnd.pop();
+	return opnd.top();
+}
+
+int main() {
+	char* S = "(0!+1)*2^(3!+4)-(5!-67-(8+9))";
+	char* RPN = NULL;
+	cout << evaluate(S, RPN);
+    cout << RPN << endl;
+	return 0;
 }
